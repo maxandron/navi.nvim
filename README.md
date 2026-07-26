@@ -4,7 +4,7 @@
 
 ![Navi at the third stop of a guided source tour](assets/navi-navigation.png)
 
-A small Neovim companion for JSON-defined source tours. Navi opens each stop, marks its source range, and renders its Markdown-like note as virtual lines beneath the range.
+A small Neovim companion for JSON-defined source tours. Navi opens each stop, marks its source range, and renders its Markdown-like note as virtual lines above the range.
 
 Navi has no required dependencies. If [Telescope](https://github.com/nvim-telescope/telescope.nvim) is available, `:NaviPick` uses it; otherwise it uses `vim.ui.select`.
 
@@ -37,6 +37,7 @@ The agent loads a verified tour with `:NaviLoad /absolute/path/to/tour.json`; th
 - Locates ranges by line numbers or literal start and end patterns.
 - Renders Markdown-like headings, emphasis, links, lists, quotes, rules, and fenced code in virtual lines.
 - Wraps notes to the window's text viewport, excluding number and sign columns.
+- Renders each note above its range and scrolls every jump until the whole note is visible, so a long range never hides its explanation.
 - Uses an asterisk sign and no winbar for a one-stop tour.
 - Uses numbered signs and a count-only `current/total` winbar for multi-stop tours.
 - Provides Telescope and built-in pickers plus an explicit clear command.
@@ -168,7 +169,7 @@ A tour is a JSON array of stop objects:
 | `pattern` | non-empty string | exactly one start anchor | Literal text used to find the first matching start line. |
 | `end_line` | positive integer | no | One-based inclusive end line. Mutually exclusive with `end_pattern`. |
 | `end_pattern` | non-empty string | no | Literal text used to find the first match at or after the start. Mutually exclusive with `end_line`. |
-| `message` | string | yes | Markdown-like note rendered below the source range. May be empty. |
+| `message` | string | yes | Markdown-like note rendered above the source range. May be empty. |
 
 The tour must be a non-empty array of stop objects. Every source file must be readable when the tour is loaded. Numeric anchors must be within the file, an end must not precede its start, and every pattern must resolve. Pattern matching is literal, not a Lua pattern or regular expression.
 

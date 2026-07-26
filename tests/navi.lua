@@ -214,5 +214,39 @@ assert_equal(#vim.fn.sign_getplaced(first_buf, { group = navi.sign_group })[1].s
 assert_equal(#extmarks(navi, first_buf), 0, "cleared first-buffer extmarks")
 assert_equal(#extmarks(navi, second_buf), 0, "cleared second-buffer extmarks")
 
+-- The note renders above the range start, and a jump scrolls it fully into view.
+local long_file = root .. "/long-range.ts"
+local long_lines = {}
+for index = 1, 200 do
+  long_lines[index] = string.format("const value%03d = %d", index, index)
+end
+vim.fn.writefile(long_lines, long_file)
+local canonical_long = assert(vim.uv.fs_realpath(long_file))
+
+vim.api.nvim_win_set_width(0, 60)
+assert(navi.load({
+  {
+    file = canonical_long,
+    line = 100,
+    end_line = 160,
+    message = "## Above\n\n" .. string.rep("Explanation line.\n", 8),
+  },
+}))
+local long_buf = vim.fn.bufnr(canonical_long)
+local long_note = assert(note_mark(navi, long_buf), "expected a note for the long range")
+assert_equal(long_note[2], 99, "note anchors on the range start row")
+assert(long_note[4].virt_lines_above, "expected the note above its range")
+assert_equal(vim.api.nvim_win_get_cursor(0)[1], 100, "cursor rests on the range start")
+local note_height = #long_note[4].virt_lines
+assert(
+  vim.api.nvim_win_get_height(0) > note_height,
+  string.format("test window of %d rows is too short for a %d-line note", vim.api.nvim_win_get_height(0), note_height)
+)
+assert(
+  vim.fn.winline() > note_height,
+  string.format("expected %d note rows above the cursor, got %d", note_height, vim.fn.winline() - 1)
+)
+vim.cmd.NaviClear()
+
 vim.fn.delete(root, "rf")
 print("Navi tests passed")

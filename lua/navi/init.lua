@@ -231,10 +231,10 @@ local function render_active(window, bufnr)
 
   local stop = M.stops[M.current]
   if not stop or not vim.api.nvim_win_is_valid(window) or not vim.api.nvim_buf_is_valid(bufnr) then
-    return
+    return 0
   end
   if realpath(vim.api.nvim_buf_get_name(bufnr)) ~= stop.file then
-    return
+    return 0
   end
 
   local width = text_width(window)
@@ -263,7 +263,43 @@ local function render_active(window, bufnr)
     hl_eol = true,
     priority = 50,
   })
-  vim.api.nvim_buf_set_extmark(bufnr, M.ns, stop.end_line - 1, 0, { virt_lines = virt_lines })
+  vim.api.nvim_buf_set_extmark(bufnr, M.ns, stop.line - 1, 0, {
+    virt_lines = virt_lines,
+    virt_lines_above = true,
+  })
+  return #virt_lines
+end
+
+-- The note renders above the stop, so centering the start line is not enough:
+-- a note taller than the space above the cursor stays off screen. Scroll the
+-- view up until every note line is visible without moving the cursor off the
+-- stop's start line.
+local function reveal_note(window, note_height)
+  vim.api.nvim_win_call(window, function()
+    vim.cmd("normal! zz")
+    if note_height <= 0 then
+      return
+    end
+
+    local line = vim.api.nvim_win_get_cursor(window)[1]
+    local height = vim.api.nvim_win_get_height(window)
+    local target = math.min(note_height + 1, math.max(1, height - 1))
+
+    for _ = 1, height do
+      local before = vim.fn.winline()
+      if before >= target then
+        break
+      end
+      vim.cmd("normal! \25") -- CTRL-Y scrolls the view up, revealing the note
+      if vim.api.nvim_win_get_cursor(window)[1] ~= line then
+        vim.api.nvim_win_set_cursor(window, { line, 0 })
+        break
+      end
+      if vim.fn.winline() <= before then
+        break
+      end
+    end
+  end)
 end
 
 local function rerender_active()
@@ -276,7 +312,12 @@ local function rerender_active()
   local current_win = vim.api.nvim_get_current_win()
   local current_buf = vim.api.nvim_win_get_buf(current_win)
   if realpath(vim.api.nvim_buf_get_name(current_buf)) == stop.file then
-    render_active(current_win, current_buf)
+    local note_height = render_active(current_win, current_buf)
+    -- A resize rewraps the note, so restore its visibility while the cursor
+    -- still rests on the stop rather than fighting a deliberate scroll.
+    if vim.api.nvim_win_get_cursor(current_win)[1] == stop.line then
+      reveal_note(current_win, note_height or 0)
+    end
     return
   end
 
@@ -300,11 +341,12 @@ function M.goto_stop(index)
   local stop = M.stops[index]
   vim.cmd("edit " .. vim.fn.fnameescape(stop.file))
   vim.api.nvim_win_set_cursor(0, { stop.line, 0 })
-  vim.cmd("normal! zz")
 
   update_winbar()
   update_signs()
-  render_active(vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf())
+  local window = vim.api.nvim_get_current_win()
+  local note_height = render_active(window, vim.api.nvim_get_current_buf())
+  reveal_note(window, note_height or 0)
 end
 
 function M.next()

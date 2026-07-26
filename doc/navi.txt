@@ -14,9 +14,11 @@ CONTENTS                                                         *navi-contents*
 INTRODUCTION                                                        *navi-intro*
 
 Navi opens JSON-defined source tour stops, marks each source range, and
-shows a Markdown-like note beneath it with virtual lines. Navi requires
-Neovim 0.10 or newer and has no required dependencies. Telescope is used by
-|:NaviPick| when available; otherwise Navi uses vim.ui.select().
+shows a Markdown-like note above it with virtual lines. Every jump places the
+cursor on the range's start line and scrolls until the whole note is visible,
+so a long range never hides its note. Navi requires Neovim 0.10 or newer and
+has no required dependencies. Telescope is used by |:NaviPick| when available;
+otherwise Navi uses vim.ui.select().
 
 ==============================================================================
 COMMANDS                                                          *navi-commands*
